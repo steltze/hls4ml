@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 from warnings import warn
 
 from hls4ml.backends.fpga.fpga_types import NamedType
@@ -91,12 +90,17 @@ class EnforceProxyModelEmbeddedConfig(OptimizerPass):
                     continue
 
                 if k.endswith('_t'):
-                    v0: Optional[NamedType] = target_node.get_attr(k)
-                    if v0 is None:
+                    var_type = target_node.get_attr(k)  # type: ignore
+                    if var_type is None:
                         continue
+                    var_type: NamedType
                     precision = to_hls4ml_fixed(v)
-                    v0.precision = precision
-                    v0.name = f'{name}_{k[:-2]}'
+                    var_type.precision = precision
+                    if k == 'result_t':
+                        type_name = f'{name}_t'
+                    else:
+                        type_name = f'{name}_{k}'
+                    var_type.name = type_name
                     # Need to overwrite kernel/bias writing precision also, or written weights will likely be wrong.
                     if k[:-2] in target_node.attributes.keys():
                         weight_var: WeightVariable = target_node.attributes[k[:-2]]
