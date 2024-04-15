@@ -33,10 +33,8 @@ strategies = ['resource']
 @pytest.mark.parametrize("kernels", kernel_options)
 @pytest.mark.parametrize("bias", bias_options)
 @pytest.mark.parametrize("io_type", io_type_options)
-@pytest.mark.parametrize('backend', ['Vitis'])
-@pytest.mark.parametrize('rf', reuse_factor)
-@pytest.mark.parametrize('strategy', strategies)
-def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, rf, strategy):
+@pytest.mark.parametrize('backend', ['Vivado', 'Vitis', 'Catapult'])
+def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend):
     model = tf.keras.models.Sequential()
     input_shape = (28, 28, 3)
     model.add(
