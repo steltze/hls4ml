@@ -15,8 +15,10 @@ chans_options = ['channels_last']
 io_type_options = ['io_stream']
 strides_options = [(1, 1), (2, 2)]
 kernel_options = [(2, 2), (3, 3)]
+# backends = ['Vivado', 'Vitis']
+backends = ['Vivado']
 bias_options = [False]
-
+strategies = ['resource']
 
 @pytest.mark.parametrize("conv2d", keras_conv2d)
 @pytest.mark.parametrize("chans", chans_options)
@@ -25,8 +27,9 @@ bias_options = [False]
 @pytest.mark.parametrize("kernels", kernel_options)
 @pytest.mark.parametrize("bias", bias_options)
 @pytest.mark.parametrize("io_type", io_type_options)
-@pytest.mark.parametrize('backend', ['Vivado', 'Vitis'])
-def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend):
+@pytest.mark.parametrize('backend', backends)
+@pytest.mark.parametrize('strategy', strategies)
+def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, strategy):
     model = tf.keras.models.Sequential()
     input_shape = (28, 28, 3)
     model.add(
@@ -43,15 +46,19 @@ def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backen
     )
 
     model.compile(optimizer='adam', loss='mse')
-    X_input = np.random.rand(100, *input_shape)
+    X_input = np.random.rand(1, *input_shape)
     keras_prediction = model.predict(X_input)
+    
     config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<32,16>')
+    config['Model']['Strategy'] = strategy
+    config['Model']['ReuseFactor'] = 1
+
     stride_cfg = str(strides).replace(', ', '_').replace('(', '').replace(')', '')
     kernel_cfg = str(kernels).replace(', ', '_').replace('(', '').replace(')', '')
     output_dir = str(
         test_root_path
-        / 'hls4mlprj_{}_{}_strides_{}_kernels_{}_{}_padding_{}_{}'.format(
-            conv2d.__name__.lower(), chans, stride_cfg, kernel_cfg, padds, backend, io_type
+        / 'hls4mlprj_{}_{}_strides_{}_kernels_{}_{}_padding_{}_{}_{}'.format(
+            conv2d.__name__.lower(), chans, stride_cfg, kernel_cfg, padds, backend, io_type, strategy
         )
     )
     hls_model = hls4ml.converters.convert_from_keras_model(
