@@ -3,7 +3,6 @@
 
 #include "hls_stream.h"
 #include "nnet_common.h"
-#include "nnet_mult.h"
 #include "nnet_conv_stream.h"
 #include <iostream>
 
