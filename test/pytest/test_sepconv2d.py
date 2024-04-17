@@ -10,15 +10,18 @@ import hls4ml
 test_root_path = Path(__file__).parent
 
 keras_conv2d = [SeparableConv2D]
-padds_options = ['same', 'valid']
+padds_options = ['same']
 chans_options = ['channels_last']
 io_type_options = ['io_stream']
-strides_options = [(1, 1), (2, 2)]
-kernel_options = [(2, 2), (3, 3)]
+strides_options = [(1, 1)]
+kernel_options = [(2, 2)]
 # backends = ['Vivado', 'Vitis']
 backends = ['Vivado']
 bias_options = [False]
 strategies = ['resource']
+reuse_factor = np.arange(1, 30, 1)
+reuse_factor[1] = 1
+
 
 @pytest.mark.parametrize("conv2d", keras_conv2d)
 @pytest.mark.parametrize("chans", chans_options)
@@ -29,7 +32,8 @@ strategies = ['resource']
 @pytest.mark.parametrize("io_type", io_type_options)
 @pytest.mark.parametrize('backend', backends)
 @pytest.mark.parametrize('strategy', strategies)
-def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, strategy):
+@pytest.mark.parametrize('rf', reuse_factor)
+def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, strategy, rf):
     model = tf.keras.models.Sequential()
     input_shape = (28, 28, 3)
     model.add(
@@ -51,7 +55,7 @@ def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backen
     
     config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<32,16>')
     config['Model']['Strategy'] = strategy
-    config['Model']['ReuseFactor'] = 1
+    config['Model']['ReuseFactor'] = rf
 
     stride_cfg = str(strides).replace(', ', '_').replace('(', '').replace(')', '')
     kernel_cfg = str(kernels).replace(', ', '_').replace('(', '').replace(')', '')

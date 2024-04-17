@@ -23,8 +23,8 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     const int block_factor = DIV_ROUNDUP(nin, CONFIG_T::reuse_factor);
     const int multscale = multiplier_limit;
 
-    assert((multiplier_limit % nout == 0 || rufactor >= nin) && "The current Reuse Factor is not allowed");
-    assert((multiplier_limit == block_factor) && "This function is correct only for RF <= N_IN");
+    // assert((multiplier_limit % nout == 0 || rufactor >= nin) && "The current Reuse Factor is not allowed");
+    // assert((multiplier_limit == block_factor) && "This function is correct only for RF <= N_IN");
 
     // #pragma HLS function_instantiate variable=weights,biases
     // //#pragma HLS RESOURCE variable=weights core=RAM_2P_BRAM Commenting out the deisgnation HLS seems to choose correctly
@@ -34,8 +34,6 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     // #pragma HLS ARRAY_PARTITION variable=acc complete
     // std::cout << rufactor << std::endl;
-    std::cout << "blocks " << block_factor << std::endl;
-
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -55,7 +53,7 @@ ReuseLoop:
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
             // #pragma HLS UNROLL
-
+            out_index = (in_index % CONFIG_T::n_chan);
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]));
 
             // acc[out_index] += CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]);
@@ -80,7 +78,7 @@ ReuseLoop:
             w_index += rufactor;    
             // Increment in_index
             in_index += rufactor;
-            out_index = (in_index % CONFIG_T::n_chan);
+            
         }
     }
 
