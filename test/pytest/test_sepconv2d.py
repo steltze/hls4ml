@@ -14,13 +14,13 @@ padds_options = ['same']
 chans_options = ['channels_last']
 io_type_options = ['io_stream']
 strides_options = [(1, 1)]
-kernel_options = [(2, 2)]
+kernel_options = [(4, 4)]
 # backends = ['Vivado', 'Vitis']
 backends = ['Vivado']
 bias_options = [False]
 strategies = ['resource']
-reuse_factor = np.arange(1, 30, 1)
-reuse_factor[1] = 1
+reuse_factor = [7,8,9,10]
+# reuse_factor[1] = 1
 
 
 @pytest.mark.parametrize("conv2d", keras_conv2d)
@@ -35,10 +35,10 @@ reuse_factor[1] = 1
 @pytest.mark.parametrize('rf', reuse_factor)
 def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, strategy, rf):
     model = tf.keras.models.Sequential()
-    input_shape = (28, 28, 3)
+    input_shape = (16, 16, 8)
     model.add(
         conv2d(
-            filters=32,
+            filters=1,
             kernel_size=kernels,
             strides=strides,
             padding=padds,

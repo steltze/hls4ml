@@ -17,43 +17,48 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     const int nout = CONFIG_T::n_chan;
 
     const int rufactor = MIN(CONFIG_T::reuse_factor, nin);
-    const int multfactor = MIN(nin, CONFIG_T::reuse_factor);
-    const int multiplier_limit = DIV_ROUNDUP(nin, multfactor);
+    // const int multfactor = MIN(nin, CONFIG_T::reuse_factor);
+    // const int multiplier_limit = DIV_ROUNDUP(nin, multfactor);
     const int block_factor = DIV_ROUNDUP(nin, CONFIG_T::reuse_factor);
-    const int multscale = multiplier_limit;
+    // const int multscale = multiplier_limit;
 
     // assert((multiplier_limit % nout == 0 || rufactor >= nin) && "The current Reuse Factor is not allowed");
     // assert((multiplier_limit == block_factor) && "This function is correct only for RF <= N_IN");
 
-    // #pragma HLS function_instantiate variable=weights,biases
-    // //#pragma HLS RESOURCE variable=weights core=RAM_2P_BRAM Commenting out the deisgnation HLS seems to choose correctly
-    // #pragma HLS ARRAY_RESHAPE   variable=weights block factor=block_factor
-    // #pragma HLS ARRAY_PARTITION variable=biases complete
+    #pragma HLS function_instantiate variable=weights,biases
+    //#pragma HLS RESOURCE variable=weights core=RAM_2P_BRAM Commenting out the deisgnation HLS seems to choose correctly
+    #pragma HLS ARRAY_RESHAPE   variable=weights block factor=block_factor
+    #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    // #pragma HLS ARRAY_PARTITION variable=acc complete
+    #pragma HLS ARRAY_PARTITION variable=acc complete
     // std::cout << rufactor << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
-        // #pragma HLS UNROLL
+        #pragma HLS UNROLL
         acc[iacc] = (typename CONFIG_T::accum_t)biases[iacc];
     }
 
+
+
+    int in_index = 0;
+    int out_index = 0;
+
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
-        // #pragma HLS PIPELINE II=1 rewind
+        #pragma HLS PIPELINE II=1 rewind
 
-        int w_index = ir;
-        int in_index = ir;
-        int out_index = 0;
-        int acc_step = 0;
+        // int w_index = ir;
+        // int in_index = ir;
+        // int out_index = 0;
+        // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
-            // #pragma HLS UNROLL
-            out_index = (in_index % CONFIG_T::n_chan);
-            acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]));
+            #pragma HLS UNROLL
+            // out_index = (in_index % CONFIG_T::n_chan);
+            acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
             // acc[out_index] += CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]);
 
@@ -74,9 +79,12 @@ ReuseLoop:
             //     acc_step++;
             // }
                         // Increment w_index
-            w_index += rufactor;    
+            // w_index += rufactor;    
             // Increment in_index
-            in_index += rufactor;
+            if (++out_index >= CONFIG_T::n_chan) {
+                out_index = 0;
+            }
+            in_index++;
             
         }
     }
