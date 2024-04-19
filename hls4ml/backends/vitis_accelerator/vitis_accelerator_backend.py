@@ -1,7 +1,7 @@
 import os
 
 from hls4ml.backends import VitisBackend, VivadoBackend
-from hls4ml.model.flow import register_flow
+from hls4ml.model.flow import get_flow, register_flow
 from hls4ml.report import parse_vivado_report
 
 
@@ -33,8 +33,8 @@ class VitisAcceleratorBackend(VitisBackend):
             cosim=cosim,
             validation=validation,
             export=export,
-            vsynth=vsynth,
-            fifo_opt=fifo_opt,
+            vsynth=vsynth
+            # fifo_opt=fifo_opt,
         )
         # Get Config to view Board and Platform
         from hls4ml.backends import VitisAcceleratorConfig
@@ -153,11 +153,22 @@ class VitisAcceleratorBackend(VitisBackend):
         return self._writer_flow
 
     def _register_flows(self):
-        vivado_ip = 'vivado:ip'
-        writer_passes = ['make_stamp', 'vivadoaccelerator:write_hls']
-        self._writer_flow = register_flow('write', writer_passes, requires=[vivado_ip], backend=self.name)
-        self._default_flow = vivado_ip
+        validation_passes = [
+            'vitisaccelerator:validate_conv_implementation',
+            'vitisaccelerator:validate_strategy',
+        ]
+        validation_flow = register_flow('validation', validation_passes, requires=['vivado:init_layers'], backend=self.name)
 
-        fifo_depth_opt_passes = ['vivadoaccelerator:fifo_depth_optimization'] + writer_passes
+        # Any potential templates registered specifically for Vitis backend
+        template_flow = register_flow(
+            'apply_templates', self._get_layer_templates, requires=['vivado:init_layers'], backend=self.name
+        )
 
-        register_flow('fifo_depth_optimization', fifo_depth_opt_passes, requires=[vivado_ip], backend=self.name)
+        writer_passes = ['make_stamp', 'vitisaccelerator:write_hls']
+        self._writer_flow = register_flow('write', writer_passes, requires=['vitis:ip'], backend=self.name)
+
+        ip_flow_requirements = get_flow('vivado:ip').requires.copy()
+        ip_flow_requirements.insert(ip_flow_requirements.index('vivado:init_layers'), validation_flow)
+        ip_flow_requirements.insert(ip_flow_requirements.index('vivado:apply_templates'), template_flow)
+
+        self._default_flow = register_flow('ip', None, requires=ip_flow_requirements, backend=self.name)
