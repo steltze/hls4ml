@@ -170,18 +170,19 @@ class VitisAcceleratorWriter(VitisWriter):
                     newline += indent + 'for(unsigned i = 0; i < N_IN / {input_t}::size; ++i) {{\n'
                     # newline += indent + indent + '#pragma HLS PIPELINE\n'
                     newline += indent + indent + '{input_t} ctype;\n'
-                    newline += indent + indent + '#pragma HLS DATA_PACK variable=ctype\n'
+                    # newline += indent + indent + '#pragma HLS DATA_PACK variable=ctype\n'
+                            	
                     newline += indent + indent + 'for(unsigned j = 0; j < {input_t}::size; j++) {{\n'
-                    # newline += indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + 'input_axi_t data  = in[i * input_t::size + j];\n'
                     if self.vitis_accelerator_config.get_interface() == 'axi_stream':
                         newline += (
                             indent
                             + indent
                             + indent
-                            + 'ctype[j] = typename {input_t}::value_type(in[i * {input_t}::size + j].data);\n'
+                            + 'ctype[j] = typename {input_t}::value_type(data.data);\n'
                         )
                         newline += (
-                            indent + indent + indent + 'is_last |= (in[i * input_t::size + j].last == 1)? true : false;\n'
+                            indent + indent + indent + 'is_last |= (data.last == 1)? true : false;\n'
                         )
                     else:
                         newline += (
@@ -414,7 +415,7 @@ class VitisAcceleratorWriter(VitisWriter):
 
     def write_hls(self, model):
         """
-        Write the HLS project. Calls the VivadoBackend writer, and extra steps for VitisAccelerator/AXI interface
+        Write the HLS project. Calls the VitisBackend writer, and extra steps for VitisAccelerator/AXI interface
         """
         # TODO temporarily move config import here to avoid cyclic dependency, until config is moved to its own package
         from hls4ml.backends import VitisAcceleratorConfig
