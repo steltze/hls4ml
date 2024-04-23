@@ -28,11 +28,13 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     #pragma HLS function_instantiate variable=weights,biases
     //#pragma HLS RESOURCE variable=weights core=RAM_2P_BRAM Commenting out the deisgnation HLS seems to choose correctly
     #pragma HLS ARRAY_RESHAPE   variable=weights block factor=block_factor
+    #pragma HLS ARRAY_RESHAPE   variable=data block factor=block_factor
+
     #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    #pragma HLS ARRAY_PARTITION variable=acc complete
-    // std::cout << rufactor << std::endl;
+    // #pragma HLS ARRAY_PARTITION variable=acc complete
+    // std::cout << sizeof(CONFIG_T::n_chan) << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -41,23 +43,20 @@ InitAccum:
     }
 
 
-
-    int in_index = 0;
-    int out_index = 0;
+int out_index = 0;
+int in_index = 0;
 
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
         #pragma HLS PIPELINE II=1 rewind
 
         // int w_index = ir;
-        // int in_index = ir;
-        // int out_index = 0;
         // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
             #pragma HLS UNROLL
-            // out_index = (in_index % CONFIG_T::n_chan);
+            out_index = out_index * (not (out_index == CONFIG_T::n_chan));
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
             // acc[out_index] += CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]);
@@ -81,9 +80,7 @@ ReuseLoop:
                         // Increment w_index
             // w_index += rufactor;    
             // Increment in_index
-            if (++out_index >= CONFIG_T::n_chan) {
-                out_index = 0;
-            }
+            out_index++;
             in_index++;
             
         }

@@ -19,7 +19,7 @@ kernel_options = [(4, 4)]
 backends = ['Vivado']
 bias_options = [False]
 strategies = ['resource']
-reuse_factor = [7,8,9,10]
+reuse_factor = [64]
 # reuse_factor[1] = 1
 
 
@@ -38,7 +38,7 @@ def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backen
     input_shape = (16, 16, 8)
     model.add(
         conv2d(
-            filters=1,
+            filters=2,
             kernel_size=kernels,
             strides=strides,
             padding=padds,
