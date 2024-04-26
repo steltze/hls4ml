@@ -33,7 +33,7 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    // #pragma HLS ARRAY_PARTITION variable=acc complete
+    #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
     // std::cout << sizeof(CONFIG_T::n_chan) << std::endl;
 
 InitAccum:  
@@ -44,44 +44,23 @@ InitAccum:
 
 
 int out_index = 0;
-int in_index = 0;
 
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
         #pragma HLS PIPELINE II=1 rewind
 
+        int in_index = ir;
         // int w_index = ir;
         // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
             #pragma HLS UNROLL
-            out_index = out_index * (not (out_index == CONFIG_T::n_chan));
+            out_index = ((in_index % CONFIG_T::n_chan));
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
-            // acc[out_index] += CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[w_index]);
 
-            
-
-            // if ((in_index % CONFIG_T::kernel_size == 0) && (in_index != 0)) {
-            //     // in_index = ir;
-            //     out_index++;
-            // } else {
-            //     // std::cout << "out_index = " << out_index << std::endl;
-            //     // std::cout << "in_index = " << in_index << std::endl;
-            // }
-            // Increment out_index
-            // if (acc_step + 1 >= multscale) {
-            //     acc_step = 0;
-            //     out_index++;
-            // } else {
-            //     acc_step++;
-            // }
-                        // Increment w_index
-            // w_index += rufactor;    
-            // Increment in_index
-            out_index++;
-            in_index++;
+            in_index+=rufactor;
             
         }
     }
