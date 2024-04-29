@@ -46,8 +46,7 @@ class VitisBackend(VivadoBackend):
 
         return config
 
-    def build(self, model, reset=False, csim=True, synth=True, cosim=False, validation=False, export=False, vsynth=False):
-        fifo_opt = True
+    def build(self, model, reset=False, csim=True, synth=True, cosim=False, validation=False, export=False, vsynth=False, fifo_opt=False):
         if 'linux' in sys.platform:
             found = os.system('command -v vitis_hls > /dev/null')
             if found != 0:

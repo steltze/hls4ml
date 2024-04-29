@@ -198,13 +198,12 @@ class VivadoBackend(FPGABackend):
         validation=False,
         export=False,
         vsynth=False,
-        fifo_opt=False,
+        fifo_opt=True,
     ):
         if 'linux' in sys.platform:
             found = os.system('command -v vivado_hls > /dev/null')
             if found != 0:
                 raise Exception('Vivado HLS installation not found. Make sure "vivado_hls" is on PATH.')
-
         curr_dir = os.getcwd()
         os.chdir(model.config.get_output_dir())
         vivado_cmd = (
