@@ -49,8 +49,7 @@ ReuseLoop:
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        out_index++;
-        out_index -= ((out_index) == CONFIG_T::n_chan)*CONFIG_T::n_chan;
+        out_index = in_index % CONFIG_T::n_chan;
         // int w_index = ir;
         // int acc_step = 0;
 
@@ -60,7 +59,10 @@ ReuseLoop:
             
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
-            in_index+=rufactor;         
+            in_index+=rufactor;
+
+            out_index+=rufactor;
+            out_index -= ((out_index) >= CONFIG_T::n_chan)*CONFIG_T::n_chan;
         }
     }
 
@@ -184,11 +186,11 @@ ReuseLoop:
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
             #pragma HLS UNROLL
-            out_index = in_index - ()*CONFIG_T::n_chan;
+
+            out_index = in_index % CONFIG_T::n_chan;
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
             in_index+=rufactor;
-            
         }
     }
 
