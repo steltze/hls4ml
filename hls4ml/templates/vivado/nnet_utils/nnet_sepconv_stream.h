@@ -301,6 +301,26 @@ CastLoop:
     }
 }
 
+// template <class data_T, class res_T, typename CONFIG_T>
+// void dense_resource(data_T data[CONFIG_T::n_in], res_T res[CONFIG_T::n_out],
+//                     typename CONFIG_T::weight_t weights[CONFIG_T::n_in * CONFIG_T::n_out],
+//                     typename CONFIG_T::bias_t biases[CONFIG_T::n_out]) {
+template <class data_T, class res_T, typename CONFIG_T>
+void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_chan], res_T res[CONFIG_T::n_chan],
+                       typename CONFIG_T::weight_t weights[CONFIG_T::kernel_size * CONFIG_T::n_chan],
+                       typename CONFIG_T::bias_t biases[CONFIG_T::n_chan]) {
+
+    #pragma HLS INLINE recursive
+
+    if (CONFIG_T::reuse_factor < CONFIG_T::n_chan) {
+        depthwise_product_resource_rf_leq_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    } else if (CONFIG_T::reuse_factor % CONFIG_T::n_in == 0) {
+        depthwise_product_resource_rf_gt_nchan_rem0<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    } else {
+        depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    }
+}
+
 template <class data_T, class res_T, typename CONFIG_T>
 void compute_depthwise_output_encoded(
     const data_T &in_elem, hls::stream<typename data_T::value_type> data_window[CONFIG_T::kernel_size * CONFIG_T::n_chan],
