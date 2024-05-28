@@ -53,7 +53,7 @@ def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backen
     X_input = np.random.rand(1, *input_shape)
     keras_prediction = model.predict(X_input)
     
-    config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<8,4>')
+    config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<32,16>')
     config['Model']['Strategy'] = strategy
     config['Model']['ReuseFactor'] = rf
 

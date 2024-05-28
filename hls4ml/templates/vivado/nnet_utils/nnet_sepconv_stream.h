@@ -34,7 +34,7 @@ void depthwise_product_resource_rf_leq_nchan(data_T data[CONFIG_T::kernel_size *
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
-    // std::cout << sizeof(CONFIG_T::n_chan) << std::endl;
+    std::cout << "LEQ IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -101,7 +101,7 @@ void depthwise_product_resource_rf_gt_nchan_rem0(data_T data[CONFIG_T::kernel_si
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
-    // std::cout << sizeof(CONFIG_T::n_chan) << std::endl;
+    std::cout << "REM0 IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -116,8 +116,6 @@ ReuseLoop:
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        out_index++;
-        out_index -= ((out_index) == CONFIG_T::n_chan)*CONFIG_T::n_chan;
         // int w_index = ir;
         // int acc_step = 0;
 
@@ -129,6 +127,8 @@ ReuseLoop:
 
             in_index+=rufactor;         
         }
+        out_index++;
+        out_index -= ((out_index) == CONFIG_T::n_chan)*CONFIG_T::n_chan;
     }
 
 // Cast to "res_t" type
@@ -165,7 +165,7 @@ void depthwise_product_resource_rf_gt_nchan(data_T data[CONFIG_T::kernel_size * 
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
-    // std::cout << sizeof(CONFIG_T::n_chan) << std::endl;
+    std::cout << "GT IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -255,6 +255,22 @@ Result:
 }
 
 template <class data_T, class res_T, typename CONFIG_T>
+void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_chan], res_T res[CONFIG_T::n_chan],
+                       typename CONFIG_T::weight_t weights[CONFIG_T::kernel_size * CONFIG_T::n_chan],
+                       typename CONFIG_T::bias_t biases[CONFIG_T::n_chan]) {
+
+    #pragma HLS INLINE recursive
+
+    if (CONFIG_T::reuse_factor < CONFIG_T::n_chan) {
+        depthwise_product_resource_rf_leq_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    } else if (CONFIG_T::reuse_factor % CONFIG_T::n_chan == 0) {
+        depthwise_product_resource_rf_gt_nchan_rem0<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    } else {
+        depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    }
+}
+
+template <class data_T, class res_T, typename CONFIG_T>
 void depthwise_mult_buffer(hls::stream<typename data_T::value_type> data_window[CONFIG_T::kernel_size * CONFIG_T::n_chan],
                            res_T &res_pack, hls::stream<res_T> &res_stream, unsigned &outputs_ready,
                            typename CONFIG_T::weight_t weights[CONFIG_T::kernel_size * CONFIG_T::n_chan],
@@ -298,26 +314,6 @@ CastLoop:
         } else {
             outputs_ready++;
         }
-    }
-}
-
-// template <class data_T, class res_T, typename CONFIG_T>
-// void dense_resource(data_T data[CONFIG_T::n_in], res_T res[CONFIG_T::n_out],
-//                     typename CONFIG_T::weight_t weights[CONFIG_T::n_in * CONFIG_T::n_out],
-//                     typename CONFIG_T::bias_t biases[CONFIG_T::n_out]) {
-template <class data_T, class res_T, typename CONFIG_T>
-void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_chan], res_T res[CONFIG_T::n_chan],
-                       typename CONFIG_T::weight_t weights[CONFIG_T::kernel_size * CONFIG_T::n_chan],
-                       typename CONFIG_T::bias_t biases[CONFIG_T::n_chan]) {
-
-    #pragma HLS INLINE recursive
-
-    if (CONFIG_T::reuse_factor < CONFIG_T::n_chan) {
-        depthwise_product_resource_rf_leq_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
-    } else if (CONFIG_T::reuse_factor % CONFIG_T::n_in == 0) {
-        depthwise_product_resource_rf_gt_nchan_rem0<data_T, res_T, CONFIG_T>(data, res, weights, biases);
-    } else {
-        depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
     }
 }
 
