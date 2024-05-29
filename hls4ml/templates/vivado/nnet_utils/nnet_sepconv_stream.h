@@ -33,7 +33,7 @@ void depthwise_product_resource_rf_leq_nchan(data_T data[CONFIG_T::kernel_size *
     #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
+    #pragma HLS ARRAY_PARTITION variable=acc type=complete
     std::cout << "LEQ IMPLE" << std::endl;
 
 InitAccum:  
@@ -49,7 +49,7 @@ ReuseLoop:
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        out_index = in_index % CONFIG_T::n_chan;
+        out_index = ir;
         // int w_index = ir;
         // int acc_step = 0;
 
@@ -62,7 +62,10 @@ ReuseLoop:
             in_index+=rufactor;
 
             out_index+=rufactor;
-            out_index -= ((out_index) >= CONFIG_T::n_chan)*CONFIG_T::n_chan;
+            if(out_index >= CONFIG_T::n_chan) {
+                out_index -= CONFIG_T::n_chan;
+            }
+            
         }
     }
 
@@ -94,13 +97,13 @@ void depthwise_product_resource_rf_gt_nchan_rem0(data_T data[CONFIG_T::kernel_si
 
     #pragma HLS function_instantiate variable=weights,biases
     //#pragma HLS RESOURCE variable=weights core=RAM_2P_BRAM Commenting out the deisgnation HLS seems to choose correctly
-    #pragma HLS ARRAY_RESHAPE   variable=weights block factor=block_factor
-    #pragma HLS ARRAY_RESHAPE   variable=data block factor=block_factor
+    #pragma HLS ARRAY_RESHAPE   variable=weights type=block factor=block_factor
+    #pragma HLS ARRAY_RESHAPE   variable=data type=block factor=block_factor
 
     #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
+    #pragma HLS ARRAY_PARTITION variable=acc type=complete
     std::cout << "REM0 IMPLE" << std::endl;
 
 InitAccum:  
@@ -109,13 +112,17 @@ InitAccum:
         acc[iacc] = (typename CONFIG_T::accum_t)biases[iacc];
     }
 
-int out_index = 0;
+int out_index = -1;
 
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
+        out_index++;
+        if ((out_index) == CONFIG_T::n_chan) {
+            out_index -= CONFIG_T::n_chan;
+        }
         // int w_index = ir;
         // int acc_step = 0;
 
@@ -127,8 +134,6 @@ ReuseLoop:
 
             in_index+=rufactor;         
         }
-        out_index++;
-        out_index -= ((out_index) == CONFIG_T::n_chan)*CONFIG_T::n_chan;
     }
 
 // Cast to "res_t" type
@@ -164,7 +169,7 @@ void depthwise_product_resource_rf_gt_nchan(data_T data[CONFIG_T::kernel_size * 
     #pragma HLS ARRAY_PARTITION variable=biases complete
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
-    #pragma HLS ARRAY_PARTITION variable=acc factor=block_factor
+    #pragma HLS ARRAY_PARTITION variable=acc type=complete
     std::cout << "GT IMPLE" << std::endl;
 
 InitAccum:  
