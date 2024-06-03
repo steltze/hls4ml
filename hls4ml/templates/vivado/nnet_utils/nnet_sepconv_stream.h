@@ -41,14 +41,12 @@ InitAccum:
         acc[iacc] = (typename CONFIG_T::accum_t)biases[iacc];
     }
 
-int out_index = 0;
-
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        out_index = ir;
+        int out_index = ir;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -73,7 +71,6 @@ Result:
         res[ires] = cast<data_T, res_T, CONFIG_T>(acc[ires]);
     }
 }
-
 
 template <class data_T, class res_T, typename CONFIG_T>
 void depthwise_product_resource_rf_gt_nchan_rem0(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_chan], res_T res[CONFIG_T::n_chan],
