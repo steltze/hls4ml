@@ -10,18 +10,14 @@ import hls4ml
 test_root_path = Path(__file__).parent
 
 keras_conv2d = [SeparableConv2D]
-padds_options = ['same']
+padds_options = ['same', 'valid']
 chans_options = ['channels_last']
 io_type_options = ['io_stream']
-strides_options = [(1, 1)]
-kernel_options = [(4, 4)]
-# backends = ['Vivado', 'Vitis']
-backends = ['Vitis']
+strides_options = [(1, 1), (2, 2)]
+kernel_options = [(2, 2), (3, 3)]
 bias_options = [False]
-strategies = ['resource']
 reuse_factor = [2, 4, 8, 10, 64]
-# reuse_factor[1] = 1
-
+strategies = ['latency', 'resource']
 
 @pytest.mark.parametrize("conv2d", keras_conv2d)
 @pytest.mark.parametrize("chans", chans_options)
@@ -30,15 +26,15 @@ reuse_factor = [2, 4, 8, 10, 64]
 @pytest.mark.parametrize("kernels", kernel_options)
 @pytest.mark.parametrize("bias", bias_options)
 @pytest.mark.parametrize("io_type", io_type_options)
-@pytest.mark.parametrize('backend', backends)
-@pytest.mark.parametrize('strategy', strategies)
+@pytest.mark.parametrize('backend', ['Vivado', 'Vitis', 'Catapult'])
 @pytest.mark.parametrize('rf', reuse_factor)
-def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, strategy, rf):
+@pytest.mark.parametrize('strategy', strategies)
+def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, rf, strategy):
     model = tf.keras.models.Sequential()
-    input_shape = (16, 16, 8)
+    input_shape = (28, 28, 3)
     model.add(
         conv2d(
-            filters=2,
+            filters=32,
             kernel_size=kernels,
             strides=strides,
             padding=padds,
@@ -50,24 +46,24 @@ def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backen
     )
 
     model.compile(optimizer='adam', loss='mse')
-    X_input = np.random.rand(1, *input_shape)
+    X_input = np.random.rand(100, *input_shape)
     keras_prediction = model.predict(X_input)
-    
-    config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<32,16>')
-    config['Model']['Strategy'] = strategy
-    config['Model']['ReuseFactor'] = rf
-
+    config = hls4ml.utils.config_from_keras_model(model, default_precision='ap_fixed<32,16>',)
     stride_cfg = str(strides).replace(', ', '_').replace('(', '').replace(')', '')
     kernel_cfg = str(kernels).replace(', ', '_').replace('(', '').replace(')', '')
     output_dir = str(
         test_root_path
-        / 'hls4mlprj_{}_{}_strides_{}_kernels_{}_{}_padding_{}_{}_{}'.format(
-            conv2d.__name__.lower(), chans, stride_cfg, kernel_cfg, padds, backend, io_type, strategy
+        / 'hls4mlprj_{}_{}_strides_{}_kernels_{}_{}_padding_{}_{}_rf_{}_strategy_{}'.format(
+            conv2d.__name__.lower(), chans, stride_cfg, kernel_cfg, padds, backend, io_type, rf, strategy
         )
     )
+    
+    config['Model']['Strategy'] = strategy
+    config['Model']['ReuseFactor'] = rf
     hls_model = hls4ml.converters.convert_from_keras_model(
         model, hls_config=config, output_dir=output_dir, io_type=io_type, backend=backend
     )
+    
     hls_model.compile()
     hls_prediction = hls_model.predict(X_input).reshape(keras_prediction.shape)
 
