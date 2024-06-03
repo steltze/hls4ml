@@ -34,7 +34,6 @@ void depthwise_product_resource_rf_leq_nchan(data_T data[CONFIG_T::kernel_size *
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc type=complete
-    std::cout << "LEQ IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -50,8 +49,6 @@ ReuseLoop:
 
         int in_index = ir;
         out_index = ir;
-        // int w_index = ir;
-        // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -60,9 +57,9 @@ ReuseLoop:
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
             in_index+=rufactor;
-
             out_index+=rufactor;
-            if(out_index >= CONFIG_T::n_chan) {
+
+            if (out_index >= CONFIG_T::n_chan) {
                 out_index -= CONFIG_T::n_chan;
             }
             
@@ -104,7 +101,6 @@ void depthwise_product_resource_rf_gt_nchan_rem0(data_T data[CONFIG_T::kernel_si
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc type=complete
-    std::cout << "REM0 IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -119,12 +115,11 @@ ReuseLoop:
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
+
         out_index++;
-        if ((out_index) == CONFIG_T::n_chan) {
-            out_index -= CONFIG_T::n_chan;
+        if (out_index == CONFIG_T::n_chan) {
+            out_index = 0;
         }
-        // int w_index = ir;
-        // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -170,7 +165,6 @@ void depthwise_product_resource_rf_gt_nchan(data_T data[CONFIG_T::kernel_size * 
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc type=complete
-    std::cout << "GT IMPLE" << std::endl;
 
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
@@ -185,8 +179,6 @@ ReuseLoop:
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        // int w_index = ir;
-        // int acc_step = 0;
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -206,7 +198,6 @@ Result:
         res[ires] = cast<data_T, res_T, CONFIG_T>(acc[ires]);
     }
 }
-
 
 template <class data_T, class res_T, typename CONFIG_T>
 void depthwise_product_latency(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_chan], res_T res[CONFIG_T::n_chan],
