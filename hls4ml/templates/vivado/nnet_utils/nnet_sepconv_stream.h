@@ -169,7 +169,7 @@ InitAccum:
         acc[iacc] = (typename CONFIG_T::accum_t)biases[iacc];
     }
 
-const int rem = CONFIG_T::reuse_factor % CONFIG_T::n_chan;
+const int remainder = CONFIG_T::reuse_factor % CONFIG_T::n_chan;
 int out_index_counter = -1;
 
 ReuseLoop:
@@ -191,7 +191,7 @@ ReuseLoop:
             acc[out_index] += static_cast<typename CONFIG_T::accum_t>(CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(data[in_index], weights[in_index]));
 
             in_index += rufactor;
-            out_index += rem;
+            out_index += remainder;
             if (out_index >= CONFIG_T::n_chan) {
                 out_index -= CONFIG_T::n_chan;
             }
