@@ -5,7 +5,6 @@ tf.config.set_visible_devices([], 'GPU')
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow.keras.layers import SeparableConv2D
 
 import hls4ml
 import os
@@ -26,7 +25,6 @@ bias_options = [False]
 reuse_factor = [17, 37, 64, 159, 500, 1024]
 strategies = ['resource']
 
-@pytest.mark.parametrize('conv2d', keras_conv2d)
 @pytest.mark.parametrize('chans', chans_options)
 @pytest.mark.parametrize('padds', padds_options)
 @pytest.mark.parametrize('strides', strides_options)
@@ -42,11 +40,11 @@ strategies = ['resource']
         ('Catapult', 'io_stream'),
     ],
 )
-def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend):
+def test_sepconv2d(chans, padds, strides, kernels, bias, io_type, backend):
     model = tf.keras.models.Sequential()
     input_shape = (16, 16, 3)
     model.add(
-        conv2d(
+        tf.keras.layers.SeparableConv2D(
             filters=8,
             kernel_size=kernels,
             strides=strides,
