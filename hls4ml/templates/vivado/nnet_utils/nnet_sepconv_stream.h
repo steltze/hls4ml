@@ -34,7 +34,7 @@ void depthwise_product_resource_rf_lt_nchan(data_T data[CONFIG_T::kernel_size * 
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc type=complete
-
+    
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
         #pragma HLS UNROLL
@@ -105,6 +105,16 @@ InitAccum:
         acc[iacc] = (typename CONFIG_T::accum_t)biases[iacc];
     }
 
+int outidx[rufactor];
+int outstep = 0;
+IndexLoop:
+    for (int ir = 0; ir < rufactor; ir++) {
+        outidx[ir] = outstep;
+        outstep++;
+        if (outstep == CONFIG_T::n_chan) {
+            outstep = 0;
+        }
+    }
 int out_index = -1;
 
 ReuseLoop:
@@ -113,10 +123,7 @@ ReuseLoop:
 
         int in_index = ir;
 
-        out_index++;
-        if (out_index == CONFIG_T::n_chan) {
-            out_index = 0;
-        }
+        out_index = outidx[ir];
 
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -162,7 +169,7 @@ void depthwise_product_resource_rf_gt_nchan(data_T data[CONFIG_T::kernel_size * 
 
     typename CONFIG_T::accum_t acc[CONFIG_T::n_chan];
     #pragma HLS ARRAY_PARTITION variable=acc type=complete
-
+    
 InitAccum:  
     for (int iacc = 0; iacc < CONFIG_T::n_chan; iacc++) {
         #pragma HLS UNROLL
@@ -170,18 +177,24 @@ InitAccum:
     }
 
 const int remainder = CONFIG_T::reuse_factor % CONFIG_T::n_chan;
-int out_index_counter = -1;
+
+int outidx[rufactor];
+int outstep = 0;
+IndexLoop:
+    for (int ir = 0; ir < rufactor; ir++) {
+        outidx[ir] = outstep;
+        outstep++;
+        if (outstep == CONFIG_T::n_chan) {
+            outstep = 0;
+        }
+    }
 
 ReuseLoop:
     for (int ir = 0; ir < rufactor; ir++) {
         #pragma HLS PIPELINE II=1 rewind
 
         int in_index = ir;
-        out_index_counter++;
-        if (out_index_counter == CONFIG_T::n_chan) {
-            out_index_counter = 0;
-        }
-        int out_index = out_index_counter;
+        int out_index = outidx[ir];
         
     MultLoop:
         for (int im = 0; im < block_factor; im++) {
@@ -265,9 +278,9 @@ void depthwise_product_resource(data_T data[CONFIG_T::kernel_size * CONFIG_T::n_
     #pragma HLS INLINE recursive
 
     if (CONFIG_T::reuse_factor < CONFIG_T::n_chan) {
-        depthwise_product_resource_rf_lt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+        depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
     } else if (CONFIG_T::reuse_factor % CONFIG_T::n_chan == 0) {
-        depthwise_product_resource_rf_geq_nchan_rem0<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+        depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
     } else {
         depthwise_product_resource_rf_gt_nchan<data_T, res_T, CONFIG_T>(data, res, weights, biases);
     }

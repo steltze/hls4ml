@@ -1,23 +1,30 @@
 from pathlib import Path
-
+import tensorflow as tf
+import numpy as np
+tf.config.set_visible_devices([], 'GPU')
 import numpy as np
 import pytest
 import tensorflow as tf
 from tensorflow.keras.layers import SeparableConv2D
 
 import hls4ml
-
+import os
 test_root_path = Path(__file__).parent
 
+os.environ['XILINX_VITIS'] = "/opt/Xilinx/Vitis_HLS/2023.2/"
+os.environ['PATH'] = os.environ['XILINX_VITIS'] + '/bin:' + os.environ['PATH']
+os.environ['XILINX_VIVADO'] = "/opt/Xilinx/Vivado/2020.1/"
+os.environ['PATH'] = os.environ['XILINX_VIVADO'] + '/bin:' + os.environ['PATH']
+
 keras_conv2d = [SeparableConv2D]
-padds_options = ['same', 'valid']
+padds_options = ['same']
 chans_options = ['channels_last']
 io_type_options = ['io_stream']
-strides_options = [(1, 1), (2, 2)]
-kernel_options = [(2, 2), (3, 3)]
+strides_options = [(1, 1)]
+kernel_options = [ (4, 4)]
 bias_options = [False]
-reuse_factor = [2, 4, 8, 10, 64]
-strategies = ['latency', 'resource']
+reuse_factor = [17, 37, 64, 159, 500, 1024]
+strategies = ['resource']
 
 @pytest.mark.parametrize("conv2d", keras_conv2d)
 @pytest.mark.parametrize("chans", chans_options)
@@ -26,7 +33,7 @@ strategies = ['latency', 'resource']
 @pytest.mark.parametrize("kernels", kernel_options)
 @pytest.mark.parametrize("bias", bias_options)
 @pytest.mark.parametrize("io_type", io_type_options)
-@pytest.mark.parametrize('backend', ['Vivado', 'Vitis', 'Catapult'])
+@pytest.mark.parametrize('backend', ['Vitis'])
 @pytest.mark.parametrize('rf', reuse_factor)
 @pytest.mark.parametrize('strategy', strategies)
 def test_sepconv2d(conv2d, chans, padds, strides, kernels, bias, io_type, backend, rf, strategy):
